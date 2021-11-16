@@ -1,35 +1,78 @@
 <template>
     <div id="app">
         <h1>EPD Playground Demo App</h1>
-        <p>Das ist eine simple Demo App, wie mit JsOnFhir über den Mobile Access Gateway auf den EPD Playground zugegriffen werden kann.</p>
+        <p>Das ist eine simple Demo, wie mithilfe von JsOnFhir über den Mobile Access Gateway auf den EPD Playground zugegriffen werden kann.</p>
         <p>Mit dem Patient Generator können Beispiel-Patienten erstellt werden. Dazu muss man sich aber im BFH-Netz befinden (oder per VPN eingewählt sein). Kudos an Robin Glauser für das Erstellen des Patient Generators.</p>
         <patient-card v-if="patient" :patient="patient" :onRefresh="() => this.refreshPatient()">
         </patient-card>
-        <p>Es gibt folgende Aktionen. Aktiviere die Browser-Konsole für mehr Informationen.<br />(auf Mac: [alt] [cmd] [I], auf Windows: [Ctrl] [Shift] [I])</p>
+        <p>Es gibt folgende Aktionen: </p>
         <ul>
             <li>
-                <a @click="createPatient">Beispielpatient auf EPD Playground schreiben</a>
+                <h3>Beispielpatient schreiben</h3>
+                <p>
+                    Schreibt die Daten des oben aufgeführten Patient auf den EPD Playground. <br />
+                    Merke dir die IDs, damit du den Patient später wieder laden kannst.
+                </p>
+                <button @click="createPatient" :disabled="!patientIsNew">ausführen</button>
+                <span v-if="!patientIsNew" class="isnotnew-tip">Diese*r Patient*in ist bereits auf dem EPD Playground gespeichert.</span>
             </li>
             <li>
-                <a @click="searchLocalId">EPD SPID von Playground laden, anhand lokaler ID (PIXm)</a>
+                <h3>EPD SPID laden</h3>
+                <p>
+                    Lädt die EPD SPID vom EPD Playground, anhand einer bekannten lokalen PID (der Klinik Höheweg).
+                </p>
+                <p>
+                    <small>Dies kann die ID eines neu angelegten Patienten sein, oder eine der folgenden:
+                        <span v-for="id in knownIds" @click="() => this.localId=id.local">{{id.local}}, </span>
+                         ...
+                    </small>
+                </p>
+
+                <label for="id-input">Lokale ID:</label>
+                <input type="text" v-model="localId" id="id-input"/>
+                <p class="result">EPD SPID: <small>{{ epdSpid }}</small></p>
+                <button @click="searchSpid(localId)">ausführen</button>
             </li>
             <li>
-                <a @click="loadPatientBySPID('761337615370536004')">Patient laden (mit EPD SPID)</a>
+                <h3>Patient laden</h3>
+                <p>
+                    Lädt Patienten-Stammdaten zur angegebenen EPD SPID aus dem EPD Playground und setzt die geladenen Daten als Demo-Patient*in.
+                </p>
+                <p>
+                    <small>Beispiele für EPD SPID:
+                        <span v-for="id in knownIds" @click="() => this.epdSpid=id.spid">{{id.spid}}, </span>
+                         ...
+                     </small>
+                </p>
+                <label for="spid-input">EPD SPID:</label>
+                <input type="text" v-model="epdSpid" id="spid-input"/>
+                <button @click="loadPatientBySPID(epdSpid)">ausführen</button>
             </li>
             <li>
-                <a @click="uploadDocument">upload a document</a>
-                <input type="file" ref="documentInput" />
+                <h3>Dokument hochladen</h3>
+                <p>
+                    In Demo noch nicht implementiert.
+                </p>
+                <!--a @click="uploadDocument">upload a document</a>
+                <input type="file" ref="documentInput" /-->
             </li>
             <li>
-                <a @click="searchDocuments">search documents</a>
+                <h3>Dokumente suchen</h3>
+                <p>
+                    In Demo noch nicht implementiert.
+                </p>
+                <!--a @click="searchDocuments">search documents</a-->
             </li>
         </ul>
-
-        <!--p id="display" v-if="display!= ''">
-            {{ display }}<br /><br />
-            See browser console for details.
-        </p-->
+        <p>Tipp: Aktiviere die Browser-Konsole für mehr Informationen.<br />(auf Mac: [alt] [cmd] [I], auf Windows: [Ctrl] [Shift] [I])</p>
     </div>
+
+
+    <!--p id="display" v-if="display!= ''">
+        {{ display }}<br /><br />
+        See browser console for details.
+    </p-->
+
 </template>
 
 <script>
@@ -37,8 +80,7 @@
 import PatientCard from './PatientCard.vue';
 
 // global constants and helper functions
-import { EPD_SPID_OID, HOEHEWEG_OID } from '../static/oids.js';
-import { getIdBySystemOID, convertToBase64 } from './helpers.js';
+import { getIdBySystemOID, convertToBase64, getExamplePatientFromPatientGenerator, EPD_SPID_OID, HOEHEWEG_OID, KNOWN_IDS } from './helpers.js';
 
 // JSON templates
 import createPatientMessage from '../static/createMessageTemplate.json';
@@ -54,6 +96,10 @@ export default {
         return {
             patient: {},
             isRefreshingPatient: false,
+            localId: 'PAT.7056.0189',
+            patientIsNew: false,
+            epdSpid: '',
+            knownIds: KNOWN_IDS,
             // searchType defines the type of the resource you want to search
             searchType: 'DocumentReference',
             // searchParam defines the parameters for your search (can be null)
@@ -97,6 +143,8 @@ export default {
             this.$fhir.performOperation('process-message', createPatientMessage)
             .then(result => {
                 console.log('Create Patient server response:',result);
+                // set flag to false to prevent creating the same patient again
+                this.patientIsNew = false;
             })
             .catch(err => {
                 this.display = 'Oops. Something went wrong.';
@@ -104,13 +152,13 @@ export default {
             });
         },
 
-        searchLocalId() {
+        searchSpid(id) {
             // We search for the patients EPD SPID as registered on the EPD Playground
             // by using the local ID (which is also registered in the EPD Playground)
 
             const SEARCH_PARAMS = {
                 // sourceIdentifier is the ID we know (local ID from Klinik Höheweg)
-                sourceIdentifier: HOEHEWEG_OID + '|' + getIdBySystemOID(HOEHEWEG_OID, this.patient),
+                sourceIdentifier: HOEHEWEG_OID + '|' + id,
                 // target system is the ID we want
                 targetSystem:  EPD_SPID_OID
             }
@@ -118,12 +166,13 @@ export default {
             .then((result) => {
                 console.log('Server answer', result);
                 if (result.body && result.body.parameter && result.body.parameter[0].valueIdentifier) {
-                    console.log('EPD SPID is', result.body.parameter[0].valueIdentifier.value);
+                    this.epdSpid = result.body.parameter[0].valueIdentifier.value;
+                } else {
+                    this.epdSpid = 'nicht gefunden';
                 }
-
             })
             .catch(err => {
-                this.display = 'Oops. Something went wrong.';
+                this.epdSpid = 'nicht gefunden';
                 console.log(err);
             });
         },
@@ -136,6 +185,8 @@ export default {
             .then((result) => {
                 if (result.entry && result.entry[0] && result.entry[0].resource) {
                     this.patient = result.entry[0].resource;
+                    this.localId = getIdBySystemOID(HOEHEWEG_OID, this.patient)
+                    this.patientIsNew = false;
                 }
                 console.log('Search result', result)
             })
@@ -183,26 +234,9 @@ export default {
             });
         },
 
-        getExamplePatientFromPatientGenerator() {
-            return new Promise((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                xhr.withCredentials = true;
-
-                xhr.addEventListener("readystatechange", function() {
-                    if (this.readyState === 4) {
-                        resolve(JSON.parse(this.response));
-                    }
-                })
-
-                xhr.open("GET", "http://patient-generator.i4mi.bfh.ch/patient/get");
-                xhr.setRequestHeader("Accept", "application/json");
-                xhr.send();
-            });
-        },
-
         refreshPatient() {
             this.isRefreshingPatient = true;
-            this.getExamplePatientFromPatientGenerator()
+            getExamplePatientFromPatientGenerator()
             .then((patientResource) => {
                 const timeString = Date.now().toString();
                 // we need to replace the identifier from the Patient Generator
@@ -223,6 +257,7 @@ export default {
                     }
                 ];
                 this.patient = patientResource;
+                this.patientIsNew = true;
                 this.isRefreshingPatient = false;
             })
         }
@@ -234,7 +269,7 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 html {
     margin: 0;
 }
@@ -245,7 +280,9 @@ html {
     text-align: center;
     color: #2c3e50;
     margin-top: 60px;
-    max-width: 800px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
 }
 a {
     color: #47A0DC;
@@ -254,16 +291,59 @@ a {
 a:hover {
     color: black;
 }
+h1 {
+    color: #47A0DC;
+}
 li {
     list-style-type: none;
     text-align: left;
-    margin-top: 0.5em;
+    margin-top: 1em;
+    border-bottom: 1px solid grey;
 }
-p, ul {
+li p {
+    margin: 0;
+}
+li h3 {
+    color: #47A0DC;
+    font-weight: bold;
+    margin-bottom: 0.2em;
+}
+li button {
+    margin: 0.5em 25%;
+    width: 50%;
+}
+li label {
+    margin: 1em 0 0.5em 1em;
+    width: 30%;
+}
+li input {
+    margin: 1em 0.5em 0.5em 0.5em;
+    width: 40%;
+}
+p.result {
+    margin: 0.5em 1em;
+    width: 50%;
+}
+p {
     text-align: justify;
-    margin-left: 20%;
-    margin-right: 20%;
+    margin-left: 5%;
+    margin-right: 5%;
 }
+ul {
+    padding: 10px;
+    margin-left: 8%;
+    margin-right: 8%;
+    margin-bottom: 3em;
+}
+small {
+    text-align: left !important;
+}
+.isnotnew-tip {
+    font-size: 0.55em;
+    color: grey;
+    margin-left: 25%;
+}
+
 p#display {
     margin-left: 5vw;
     margin-right: 5vw;
@@ -280,4 +360,5 @@ p#display {
     overflow-y: scroll;
     height: 10em;
 }
+
 </style>

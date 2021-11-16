@@ -15,14 +15,14 @@
                             ? 'W'
                             : patient.gender === 'male'
                                 ? 'M'
-                                : 'O'}}</span>
+                                : 'A'}}</span>
             </li>
             <li>
                 <b>Geburtsdatum: </b>
                 <span>{{ new Date(patient.birthDate).toLocaleString().split(',')[0] }}</span>
             </li>
             <li>
-                <b>ID H&ouml;heweg: </b>
+                <b>PID H&ouml;heweg: </b>
                 <small>{{ findId(hoehewegOid) }}</small>
             </li>
             <li>
@@ -34,8 +34,7 @@
 </template>
 
 <script>
-import { EPD_SPID_OID, HOEHEWEG_OID } from '../static/oids.js';
-import { getIdBySystemOID } from './helpers.js'
+import { getIdBySystemOID, EPD_SPID_OID, HOEHEWEG_OID  } from './helpers.js'
 
 export default {
     name: 'patient-card',
@@ -68,6 +67,7 @@ export default {
     display: inline-block;
     text-align: left;
     box-shadow: 5px 5px 10px #ddd;
+    margin-bottom: -200px;
 }
 .pc-flag {
     height: 30px;
@@ -106,13 +106,18 @@ export default {
     position: relative;
 }
 .pc-patient-data {
-    display: block;
+    display: grid;
     position: relative;
     top: -175px;
-    width: 100%;
-    left: 20px;
+    width: 220px;
+    left: 90px;
+    margin-left: 0;
+    margin-right: 0;
 }
 .pc-patient-data li {
+    list-style-type: none;
+    text-align: left;
     margin-top: 0.1em;
+    border-width: 0;
 }
 </style>

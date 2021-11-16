@@ -1,0 +1,21 @@
+{
+    "resourceType": "Organization",
+    "id": "1",
+    "identifier": [
+        {
+            "system": "urn:oid:2.16.756.5.30.1.178.1.1",
+            "value": "Klinik H\u00f6heweg"
+        }
+    ],
+    "name": "Klinik H\u00f6heweg",
+    "contact": [
+        {
+            "name": {
+                "family": "Loser",
+                "given": [
+                    "Marianne"
+                ]
+            }
+        }
+    ]
+}

@@ -5,16 +5,16 @@
         <p>Mit dem Patient Generator können Beispiel-Patienten erstellt werden. Dazu muss man sich aber im BFH-Netz befinden (oder per VPN eingewählt sein). Kudos an Robin Glauser für das Erstellen des Patient Generators.</p>
         <patient-card v-if="patient" :patient="patient" :onRefresh="() => this.refreshPatient()">
         </patient-card>
-        <p>Es gibt folgende Aktionen. Aktiviere die Browser-Konsole für mehr Informationen.</p>
+        <p>Es gibt folgende Aktionen. Aktiviere die Browser-Konsole für mehr Informationen.<br />(auf Mac: [alt] [cmd] [I], auf Windows: [Ctrl] [Shift] [I])</p>
         <ul>
             <li>
-                <a @click="createPatient">create patient</a>
+                <a @click="createPatient">Beispielpatient auf EPD Playground schreiben</a>
             </li>
             <li>
-                <a @click="pixm">Search local ID using the EPR-SPID (PIXm)</a>
+                <a @click="searchLocalId">EPD SPID von Playground laden, anhand lokaler ID (PIXm)</a>
             </li>
             <li>
-                <a @click="searchPatient">search patient by any identifier</a>
+                <a @click="loadPatientBySPID('761337615370536004')">Patient laden (mit EPD SPID)</a>
             </li>
             <li>
                 <a @click="uploadDocument">upload a document</a>
@@ -23,39 +23,27 @@
             <li>
                 <a @click="searchDocuments">search documents</a>
             </li>
-
         </ul>
 
-        <p id="display" v-if="display!= ''">
+        <!--p id="display" v-if="display!= ''">
             {{ display }}<br /><br />
             See browser console for details.
-        </p>
+        </p-->
     </div>
 </template>
 
 <script>
-import createPatientBundle from '../static/createPatientBundle.json';
-import createDocumentBundle from '../static/createDocumentBundle.json';
+// Vue Components
 import PatientCard from './PatientCard.vue';
 
-// This helper function converts a file to the Base64 format, which is necessary
-// for uploading it to the EPD playground
-function convertToBase64(file) {
-    return new Promise((resolve, reject) => {
-        if (file) {
-            // FileReader function for read the file.
-            const fileReader = new FileReader();
-            var base64;
-            // Onload of file read the file content
-            fileReader.onload = (e => resolve(e.target.result));
-            // Convert data to base64
-            fileReader.readAsDataURL(file);
-        }
-        else {
-            return reject('No file.');
-        }
-    });
-}
+// global constants and helper functions
+import { EPD_SPID_OID, HOEHEWEG_OID } from '../static/oids.js';
+import { getIdBySystemOID, convertToBase64 } from './helpers.js';
+
+// JSON templates
+import createPatientMessage from '../static/createMessageTemplate.json';
+import organizationHoeheweg from '../static/organizationHoeheweg.json';
+import createDocumentBundle from '../static/createDocumentBundle.json';
 
 export default {
     name: 'app',
@@ -72,19 +60,41 @@ export default {
             searchParam: {
                 "status": 'current',
                 "patient.identifier": "urn:oid:1.1.1.99.1|0f5a8034-3c8a-4796-bd39-d3ea877a4155"
-            },
-            // loggedIn keeps track of the logged in state (for GUI adjustment)
-            // display shows some results of the actions
-            display: ''
+            }
         }
     },
 
-    // methods are used for click events only in this app
     methods: {
         createPatient() {
-            // add Patient to
-            createPatientBundle.entry.find(entry => entry.resource.resourceType === 'Patient').resource = this.patient;
-            this.$fhir.performOperation('process-message', createPatientBundle)
+            // for creating a patient, we need to build a FHIR message resource
+
+            // first, add the Klinik Höheweg Organization as a contained resource
+            // Patient resource:
+            this.patient.contained = [ organizationHoeheweg ];
+            // and refer to it:
+            this.patient.managingOrganization = { reference: '#' + organizationHoeheweg.id };
+
+            // the Patient resource also needs an id for the bundle (this is
+            // just for use inside the Bundle and does not show up in EPD Playground)
+            this.patient.id = Math.ceil(Math.random() * 10000).toString();
+
+            // now, the patient resource is complete and can be added to the
+            // Message Bundle template
+            createPatientMessage.entry.push({
+                fullUrl: 'http://example.com/fhir/Patient/' + this.patient.id,
+                request: {
+                    method: 'POST'
+                },
+                resource: this.patient
+            });
+
+            // link  the Patient resource in the Message Header (which must be
+            // always the first entry of the Message Bundle)
+            createPatientMessage.entry[0].focus = [ { reference: 'Patient/' + this.patient.id } ];
+
+            // now, we are ready to go and can send the Bundle to the Mobile Access Gateway
+            console.log(createPatientMessage)
+            this.$fhir.performOperation('process-message', createPatientMessage)
             .then(result => {
                 console.log('Create Patient server response:',result);
             })
@@ -94,11 +104,23 @@ export default {
             });
         },
 
-        pixm() {
-            this.$fhir.performOperation('ihe-pix', {}, 'GET', {sourceIdentifier: 'urn:oid:2.16.756.5.30.1.127.3.10.3|DEMO', targetSystem: 'urn:oid:2.16.756.5.30.1.178.1.1'}, 'Patient')
+        searchLocalId() {
+            // We search for the patients EPD SPID as registered on the EPD Playground
+            // by using the local ID (which is also registered in the EPD Playground)
+
+            const SEARCH_PARAMS = {
+                // sourceIdentifier is the ID we know (local ID from Klinik Höheweg)
+                sourceIdentifier: HOEHEWEG_OID + '|' + getIdBySystemOID(HOEHEWEG_OID, this.patient),
+                // target system is the ID we want
+                targetSystem:  EPD_SPID_OID
+            }
+            this.$fhir.performOperation('ihe-pix', {}, 'GET', SEARCH_PARAMS, 'Patient')
             .then((result) => {
-                this.display = 'See console.';
-                console.log('pixm result', result)
+                console.log('Server answer', result);
+                if (result.body && result.body.parameter && result.body.parameter[0].valueIdentifier) {
+                    console.log('EPD SPID is', result.body.parameter[0].valueIdentifier.value);
+                }
+
             })
             .catch(err => {
                 this.display = 'Oops. Something went wrong.';
@@ -106,10 +128,15 @@ export default {
             });
         },
 
-        searchPatient() {
-            this.$fhir.search('Patient', {identifier: 'identifier=2.16.756.5.30.1.127.3.10.3|DEMO'})
+        loadPatientBySPID(spid) {
+            const SEARCH_PARAMS = {
+                identifier: EPD_SPID_OID + '|' + spid
+            }
+            this.$fhir.search('Patient', SEARCH_PARAMS)
             .then((result) => {
-                this.display = 'See console.';
+                if (result.entry && result.entry[0] && result.entry[0].resource) {
+                    this.patient = result.entry[0].resource;
+                }
                 console.log('Search result', result)
             })
             .catch(err => {
@@ -178,17 +205,23 @@ export default {
             this.getExamplePatientFromPatientGenerator()
             .then((patientResource) => {
                 const timeString = Date.now().toString();
-                patientResource.identifier.push(
+                // we need to replace the identifier from the Patient Generator
+                patientResource.identifier = [
                     {
-                        // the OID for Klinik Höheweg
-                        system: 'urn:oid:2.16.756.5.30.1.178.1.1',
+                        system: HOEHEWEG_OID,
                         // generate a patient id from the time string
                         // (to reduce the change of collision while keeping it readable)
                         value: 'PAT.' + timeString.substring(3,7) + '.' + timeString.substring(7,11),
                         assigner: {
                             display: 'Klinik H\u00f6heweg'
                         }
-                });
+                    },
+                    {
+                        system: EPD_SPID_OID,
+                        // generate a random EPD SPID for demo purposes
+                        value: '7613376153' + timeString.substring(3,11)
+                    }
+                ];
                 this.patient = patientResource;
                 this.isRefreshingPatient = false;
             })
@@ -196,7 +229,7 @@ export default {
 
     },
     mounted() {
-        this.refreshPatient()
+        this.refreshPatient();
     }
 }
 </script>

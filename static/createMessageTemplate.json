@@ -1,0 +1,27 @@
+{
+   "resourceType": "Bundle",
+   "type": "message",
+   "entry": [
+       {
+           "fullUrl": "http://example.com/fhir/MessageHeader/1",
+           "resource": {
+               "resourceType": "MessageHeader",
+               "id": "1",
+               "eventUri": "urn:ihe:iti:pmir:2019:patient-feed",
+               "source": {
+                   "endpoint": "http://example.com/patientSource"
+               },
+               "focus": [
+                   {
+                       "reference": "Patient/123"
+                   }
+               ],
+               "destination": [
+                   {
+                       "endpoint": "http://example.com/patientEndpoint"
+                   }
+               ]
+           }
+       }
+   ]
+}

@@ -23,13 +23,19 @@
             </li>
             <li>
                 <b>ID H&ouml;heweg: </b>
-                <span>{{ findId('urn:oid:2.16.756.5.30.1.178.1.1') }}</span>
+                <small>{{ findId(hoehewegOid) }}</small>
+            </li>
+            <li>
+                <b>EPD SPID: </b>
+                <small>{{ findId(epdSpidOid) }}</small>
             </li>
         </ul>
     </div>
 </template>
 
 <script>
+import { EPD_SPID_OID, HOEHEWEG_OID } from '../static/oids.js';
+import { getIdBySystemOID } from './helpers.js'
 
 export default {
     name: 'patient-card',
@@ -40,20 +46,15 @@ export default {
         onRefresh: Function,
     },
     data: () => ({
-
+        epdSpidOid: EPD_SPID_OID,
+        hoehewegOid: HOEHEWEG_OID
     }),
     methods: {
         findId(system) {
-            console.log('suche id', system, this.patient.identifier)
-            const identifier = this.patient.identifier.find(identifier => identifier.system == system);
-            console.log(identifier)
-            return identifier
-                        ? identifier.value
-                        : '-';
+            return getIdBySystemOID(system, this.patient);
         }
     },
     mounted() {
-        console.log(this.patient)
     }
 };
 </script>

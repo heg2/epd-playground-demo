@@ -1,13 +1,11 @@
 <template>
     <div id="app">
-        <h1>EPD Playground Demo</h1>
+        <h1>EPD Playground Demo App</h1>
         <p>Das ist eine simple Demo App, wie mit JsOnFhir über den Mobile Access Gateway auf den EPD Playground zugegriffen werden kann.</p>
+        <p>Mit dem Patient Generator können Beispiel-Patienten erstellt werden. Dazu muss man sich aber im BFH-Netz befinden (oder per VPN eingewählt sein). Kudos an Robin Glauser für das Erstellen des Patient Generators.</p>
+        <patient-card v-if="patient" :patient="patient" :onRefresh="() => this.refreshPatient()">
+        </patient-card>
         <p>Es gibt folgende Aktionen. Aktiviere die Browser-Konsole für mehr Informationen.</p>
-        <p v-if="patient.name && patient.name[0]">
-            Patient: {{patient.name[0].given ? patient.name[0].given[0] : ''}} {{patient.name[0].family}}
-            <span @click="refreshPatient">⟳</span>
-        </p>
-
         <ul>
             <li>
                 <a @click="createPatient">create patient</a>
@@ -38,8 +36,10 @@
 <script>
 import createPatientBundle from '../static/createPatientBundle.json';
 import createDocumentBundle from '../static/createDocumentBundle.json';
-import document from '../static/document.pdf';
+import PatientCard from './PatientCard.vue';
 
+// This helper function converts a file to the Base64 format, which is necessary
+// for uploading it to the EPD playground
 function convertToBase64(file) {
     return new Promise((resolve, reject) => {
         if (file) {
@@ -60,6 +60,7 @@ function convertToBase64(file) {
 export default {
     name: 'app',
     components: {
+        'patient-card': PatientCard
     },
     data(){
         return {
@@ -119,7 +120,6 @@ export default {
 
         uploadDocument() {
             const inputFile = this.$refs.documentInput.files[0];
-            console.log('input', inputFile)
             convertToBase64(inputFile)
             .then(base64 => {
                 createDocumentBundle.entry[0].resource = {
@@ -176,8 +176,20 @@ export default {
         refreshPatient() {
             this.isRefreshingPatient = true;
             this.getExamplePatientFromPatientGenerator()
-            .then((res) => {
-                this.patient = res;
+            .then((patientResource) => {
+                const timeString = Date.now().toString();
+                patientResource.identifier.push(
+                    {
+                        // the OID for Klinik Höheweg
+                        system: 'urn:oid:2.16.756.5.30.1.178.1.1',
+                        // generate a patient id from the time string
+                        // (to reduce the change of collision while keeping it readable)
+                        value: 'PAT.' + timeString.substring(3,7) + '.' + timeString.substring(7,11),
+                        assigner: {
+                            display: 'Klinik H\u00f6heweg'
+                        }
+                });
+                this.patient = patientResource;
                 this.isRefreshingPatient = false;
             })
         }
@@ -200,7 +212,7 @@ html {
     text-align: center;
     color: #2c3e50;
     margin-top: 60px;
-    max-width: 600px;
+    max-width: 800px;
 }
 a {
     color: #47A0DC;
@@ -234,12 +246,5 @@ p#display {
     bottom: 0;
     overflow-y: scroll;
     height: 10em;
-}
-
-.patient-card {
-    background: linear-gradient(90deg, rgba(193,208,203,1) 0%, rgba(127,152,185,1) 35%, rgba(193,186,195,1) 100%);
-    height: 223px;
-    width: 356px;
-    border-radius: 10px;
 }
 </style>

@@ -1,17 +1,15 @@
-# vue-fhir-demo
-This is a simple demo for using the [jsOnFhir](https://www.npmjs.com/package/@i4mi/js-on-fhir) wrapper in a Vue.js app.
+# epd-playground-demo
+Simple Demo App for demonstrating how to use EPD Playground with the Mobile Access Gateway.
 
-It demonstrates how a connection to a FHIR server with OAuth2 (in this case [test.midata.coop](https://test.midata.coop)) can be made, and some basic actions on resources can be done. For testing, you need a user account on the test instance of midata.coop.
+## Setup
+Node and npm have to be installed on your machine. To download the repo from github, use
+`git clone https://github.com/heg2/epd-playground-demo` in your terminal.<br />
+Then change directory with `cd epd-playground-demo` and install the dependencies using `npm i`.<br />
+Before running for the first time, you have to `npm run build`.
 
-## Project setup
-After cloning this repo with `git clone https://github.com/heg2/vue-fhir-demo`, you can install the dependencies with
-```
-npm install
-```
+## Running
+You can run the app locally with entering `npm run dev` to your terminal (when in the directory of this README file). Keep the terminal window running and open `http://localhost:3000` in your browser.<br />
+You may use the inspect mode of your browser for seeing additional details in the browser console.
 
-### Compiles and hot-reloads for development
-After installing the depencies, you can run the app with
-```
-npm run dev
-```
-and then point your browser to the displayed local url.
+## Note concerning creation of demo patient data
+The app uses the Patient Generator for creating demo patients. For this feature to work, you need to be connected to the BFH TI network in Biel, either locally or via VPN.

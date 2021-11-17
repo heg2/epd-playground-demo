@@ -26,7 +26,7 @@
                 <small>{{ findId(hoehewegOid) }}</small>
             </li>
             <li>
-                <b>EPD SPID: </b>
+                <b>EPR-SPID: </b>
                 <small>{{ findId(epdSpidOid) }}</small>
             </li>
         </ul>
@@ -34,7 +34,7 @@
 </template>
 
 <script>
-import { getIdBySystemOID, EPD_SPID_OID, HOEHEWEG_OID  } from './helpers.js'
+import { getIdBySystemOID, EPR_SPID_OID, HOEHEWEG_OID  } from './helpers.js'
 
 export default {
     name: 'patient-card',
@@ -45,7 +45,7 @@ export default {
         onRefresh: Function,
     },
     data: () => ({
-        epdSpidOid: EPD_SPID_OID,
+        epdSpidOid: EPR_SPID_OID,
         hoehewegOid: HOEHEWEG_OID
     }),
     methods: {

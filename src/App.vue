@@ -2,24 +2,32 @@
     <div id="app">
         <h1>EPD Playground Demo App</h1>
         <p>Das ist eine simple Demo, wie mithilfe von JsOnFhir über den Mobile Access Gateway auf den EPD Playground zugegriffen werden kann.</p>
-        <p>Mit dem Patient Generator können Beispiel-Patienten erstellt werden. Dazu muss man sich aber im BFH-Netz befinden (oder per VPN eingewählt sein). Kudos an Robin Glauser für das Erstellen des Patient Generators.</p>
-        <patient-card v-if="patient" :patient="patient" :onRefresh="() => this.refreshPatient()">
-        </patient-card>
-        <p>Es gibt folgende Aktionen: </p>
+        <p v-if="patientGeneratorAvailable !== false">
+            Mit dem Patient Generator können Beispiel-Patient*innen erstellt werden. Dazu muss man sich im BFH-Netz befinden (oder per VPN eingewählt sein). Kudos an Robin Glauser für das Erstellen des Patient Generators.
+        </p>
+        <p v-if="patientGeneratorAvailable === false" class="patgen-not-available">
+            Der Patient Generator ist nicht erreichbar.<br />
+            Um neue Beispiel-Patient*innen erstellen zu können, musst du dich im Netz der BFH befinden (vor Ort oder per VPN).<br>
+            Ohne Patient Generator hast du die Möglichkeit, unten über eine EPR-SPID einen vorhandenen Datensatz zu laden.
+        </p>
+        <patient-card v-if="patient.name" :patient="patient" :onRefresh="() => this.refreshPatient()" />
+
+
+        <h2>Folgende Aktionen sind verfügbar: </h2>
         <ul>
-            <li>
-                <h3>Beispielpatient schreiben</h3>
+            <li v-if="patient.name">
+                <h3>Beispielpatient*in schreiben</h3>
                 <p>
-                    Schreibt die Daten des oben aufgeführten Patient auf den EPD Playground. <br />
+                    Schreibt die oben aufgeführten Patientendaten auf den EPD Playground. <br />
                     Merke dir die IDs, damit du den Patient später wieder laden kannst.
                 </p>
                 <button @click="createPatient" :disabled="!patientIsNew">ausführen</button>
                 <span v-if="!patientIsNew" class="isnotnew-tip">Diese*r Patient*in ist bereits auf dem EPD Playground gespeichert.</span>
             </li>
             <li>
-                <h3>EPD SPID laden</h3>
+                <h3>EPR-SPID laden</h3>
                 <p>
-                    Lädt die EPD SPID vom EPD Playground, anhand einer bekannten lokalen PID (der Klinik Höheweg).
+                    Lädt die EPR-SPID vom EPD Playground, anhand einer bekannten lokalen PID (der Klinik Höheweg).
                 </p>
                 <p>
                     <small>Dies kann die ID eines neu angelegten Patienten sein, oder eine der folgenden:
@@ -30,23 +38,23 @@
 
                 <label for="id-input">Lokale ID:</label>
                 <input type="text" v-model="localId" id="id-input"/>
-                <p class="result">EPD SPID: <small>{{ epdSpid }}</small></p>
+                <p class="result">EPR-SPID: <small>{{ eprSpid }}</small></p>
                 <button @click="searchSpid(localId)">ausführen</button>
             </li>
             <li>
-                <h3>Patient laden</h3>
+                <h3>Patient*in laden</h3>
                 <p>
-                    Lädt Patienten-Stammdaten zur angegebenen EPD SPID aus dem EPD Playground und setzt die geladenen Daten als Demo-Patient*in.
+                    Lädt Patienten-Stammdaten zur angegebenen EPR-SPID aus dem EPD Playground und setzt die geladenen Daten als Demo-Patient*in.
                 </p>
                 <p>
-                    <small>Beispiele für EPD SPID:
-                        <span v-for="id in knownIds" @click="() => this.epdSpid=id.spid">{{id.spid}}, </span>
-                         ...
-                     </small>
+                    <small>Beispiele für EPR-SPID:
+                        <span v-for="id in knownIds" @click="() => this.eprSpid=id.spid">{{id.spid}}, </span>
+                        ...
+                    </small>
                 </p>
-                <label for="spid-input">EPD SPID:</label>
-                <input type="text" v-model="epdSpid" id="spid-input"/>
-                <button @click="loadPatientBySPID(epdSpid)">ausführen</button>
+                <label for="spid-input">EPR-SPID:</label>
+                <input type="text" v-model="eprSpid" id="spid-input"/>
+                <button @click="loadPatientBySPID(eprSpid)">ausführen</button>
             </li>
             <li>
                 <h3>Dokument hochladen</h3>
@@ -80,7 +88,8 @@
 import PatientCard from './PatientCard.vue';
 
 // global constants and helper functions
-import { getIdBySystemOID, convertToBase64, getExamplePatientFromPatientGenerator, EPD_SPID_OID, HOEHEWEG_OID, KNOWN_IDS } from './helpers.js';
+import { getIdBySystemOID, convertToBase64, getExamplePatientFromPatientGenerator, checkAvailability,
+         EPR_SPID_OID, HOEHEWEG_OID, KNOWN_IDS } from './helpers.js';
 
 // JSON templates
 import createPatientMessage from '../static/createMessageTemplate.json';
@@ -98,15 +107,10 @@ export default {
             isRefreshingPatient: false,
             localId: 'PAT.7056.0189',
             patientIsNew: false,
-            epdSpid: '',
-            knownIds: KNOWN_IDS,
-            // searchType defines the type of the resource you want to search
-            searchType: 'DocumentReference',
-            // searchParam defines the parameters for your search (can be null)
-            searchParam: {
-                "status": 'current',
-                "patient.identifier": "urn:oid:1.1.1.99.1|0f5a8034-3c8a-4796-bd39-d3ea877a4155"
-            }
+            eprSpid: '',
+            patientGeneratorAvailable: undefined,
+            documents: undefined,
+            knownIds: KNOWN_IDS
         }
     },
 
@@ -145,6 +149,8 @@ export default {
                 console.log('Create Patient server response:',result);
                 // set flag to false to prevent creating the same patient again
                 this.patientIsNew = false;
+                this.localId = getIdBySystemOID(HOEHEWEG_OID, this.patient);
+                this.eprSpid = getIdBySystemOID(EPR_SPID_OID, this.patient);
             })
             .catch(err => {
                 this.display = 'Oops. Something went wrong.';
@@ -153,33 +159,33 @@ export default {
         },
 
         searchSpid(id) {
-            // We search for the patients EPD SPID as registered on the EPD Playground
+            // We search for the patients EPR-SPID as registered on the EPD Playground
             // by using the local ID (which is also registered in the EPD Playground)
 
             const SEARCH_PARAMS = {
                 // sourceIdentifier is the ID we know (local ID from Klinik Höheweg)
                 sourceIdentifier: HOEHEWEG_OID + '|' + id,
                 // target system is the ID we want
-                targetSystem:  EPD_SPID_OID
+                targetSystem:  EPR_SPID_OID
             }
             this.$fhir.performOperation('ihe-pix', {}, 'GET', SEARCH_PARAMS, 'Patient')
             .then((result) => {
                 console.log('Server answer', result);
                 if (result.body && result.body.parameter && result.body.parameter[0].valueIdentifier) {
-                    this.epdSpid = result.body.parameter[0].valueIdentifier.value;
+                    this.eprSpid = result.body.parameter[0].valueIdentifier.value;
                 } else {
-                    this.epdSpid = 'nicht gefunden';
+                    this.eprSpid = 'nicht gefunden';
                 }
             })
             .catch(err => {
-                this.epdSpid = 'nicht gefunden';
+                this.eprSpid = 'nicht gefunden';
                 console.log(err);
             });
         },
 
         loadPatientBySPID(spid) {
             const SEARCH_PARAMS = {
-                identifier: EPD_SPID_OID + '|' + spid
+                identifier: EPR_SPID_OID + '|' + spid
             }
             this.$fhir.search('Patient', SEARCH_PARAMS)
             .then((result) => {
@@ -220,13 +226,13 @@ export default {
             });
         },
 
-        searchDocuments() {
+        searchDocumentsByeprSpid(spid) {
             this.$fhir.search('DocumentReference', {
-                "status": "current",
-                "patient.identifier": "urn:oid:1.1.1.99.1%7C0f5a8034-3c8a-4796-bd39-d3ea877a4155"
+                status: 'current',
+                'patient.identifier': EPR_SPID_OID + '|' + spid
             }).then((result) => {
-                this.display = 'See console.';
-                console.log('Search result', result)
+                console.log('Search result', result);
+                console.warn('set result to this.documents');
             })
             .catch(err => {
                 this.display = 'Oops. Something went wrong.';
@@ -251,8 +257,8 @@ export default {
                         }
                     },
                     {
-                        system: EPD_SPID_OID,
-                        // generate a random EPD SPID for demo purposes
+                        system: EPR_SPID_OID,
+                        // generate a  EPR-SPID from the time string, for demo purposes
                         value: '7613376153' + timeString.substring(3,11)
                     }
                 ];
@@ -261,10 +267,17 @@ export default {
                 this.isRefreshingPatient = false;
             })
         }
-
     },
     mounted() {
-        this.refreshPatient();
+        checkAvailability('http://patient-gen  erator.i4mi.bfh.ch', 2000)
+        .then((isAvailable) => {
+            this.patientGeneratorAvailable = isAvailable;
+            if (isAvailable) this.refreshPatient();
+        })
+        .catch((e) => {
+            console.log('Error pinging patient generator', e)
+            this.patientGeneratorAvailable = false;
+        });
     }
 }
 </script>
@@ -294,10 +307,17 @@ a:hover {
 h1 {
     color: #47A0DC;
 }
+h2 {
+    font-size: 1.4em;
+    margin-bottom: 0;
+    margin-top: 2em;
+    text-align: left !important;
+    margin-left: 8%;
+}
 li {
     list-style-type: none;
     text-align: left;
-    margin-top: 1em;
+    margin-bottom: 1em;
     border-bottom: 1px solid grey;
 }
 li p {
@@ -334,6 +354,7 @@ ul {
     margin-left: 8%;
     margin-right: 8%;
     margin-bottom: 3em;
+    margin-top: 0;
 }
 small {
     text-align: left !important;
@@ -342,6 +363,11 @@ small {
     font-size: 0.55em;
     color: grey;
     margin-left: 25%;
+}
+.patgen-not-available {
+    padding: 1em;
+    background-color: #ffdadb;
+    border-radius: 0.5em;
 }
 
 p#display {

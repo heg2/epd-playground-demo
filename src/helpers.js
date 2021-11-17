@@ -1,3 +1,20 @@
+export const EPR_SPID_OID = 'urn:oid:2.16.756.5.30.1.127.3.10.3';
+export const HOEHEWEG_OID = 'urn:oid:2.16.756.5.30.1.178.1.1';
+export const KNOWN_IDS = [
+    {
+        local: 'PAT.7056.0189',
+        spid: '761337615370560189'
+    },
+    {
+        local: 'PAT.7053.6004',
+        spid: '761337615370536004'
+    },
+    {
+        local: 'PATIENT1',
+        spid: 'DEMO'
+    }
+];
+
 /*
 * Get a patients ID for a given system, defined by the systems OID.
 * @param system     - the OID of the system you want to get the ID from
@@ -59,19 +76,36 @@ export function getExamplePatientFromPatientGenerator() {
     });
 }
 
-export const EPD_SPID_OID = 'urn:oid:2.16.756.5.30.1.127.3.10.3';
-export const HOEHEWEG_OID = 'urn:oid:2.16.756.5.30.1.178.1.1';
-export const KNOWN_IDS = [
-    {
-        local: 'PAT.7056.0189',
-        spid: '761337615370560189'
-    },
-    {
-        local: 'PAT.7053.6004',
-        spid: '761337615370536004'
-    },
-    {
-        local: 'PATIENT1',
-        spid: 'DEMO'
-    }
-]
+/*
+* Checks if a http server is responding or not.
+* Based on: https://stackoverflow.com/questions/4282151/is-it-possible-to-ping-a-server-from-javascript
+* @param server     - the url of the server to check
+* @param timeout    - milliseconds to wait for the server to respond
+* @returns          - A promise that resolves to true if the server responds
+*                     within the given timeout timespan (even with an error
+*                     message), and resolves to false, if the server does not respond (timeout).
+*                     The promise is rejected when the server param is not a valid url.
+*/
+export function checkAvailability(server, timeout) {
+    return new Promise((resolve, reject) => {
+        // validate correct url
+        try {
+            if (!new URL(server).protocol.includes('http')) {
+                return reject('"' + server + '" is not a valid URL.');
+            }
+        } catch (e) {
+            console.log(e);
+            return reject('"' + server + '" is not a valid URL.');
+        }
+
+        // if the url is fine, let's ping
+        let ping = new Image();
+        ping.onload = () => resolve(true);
+        // an error is also a response, so: resolve
+        ping.onerror = () => resolve(true);
+
+        ping.src = server;
+        // set timeout so were not stuck trying forever
+        setTimeout(() => resolve(false), timeout);
+    });
+}

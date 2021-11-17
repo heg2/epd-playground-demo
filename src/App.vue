@@ -269,7 +269,7 @@ export default {
         }
     },
     mounted() {
-        checkAvailability('http://patient-gen  erator.i4mi.bfh.ch', 2000)
+        checkAvailability('http://patient-generator.i4mi.bfh.ch', 2000)
         .then((isAvailable) => {
             this.patientGeneratorAvailable = isAvailable;
             if (isAvailable) this.refreshPatient();

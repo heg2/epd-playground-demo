@@ -117,7 +117,7 @@ export function checkAvailability(server, timeout) {
 */
 export function generateEprSpid(id) {
     if (id.length !== 9) {
-        throw new Error('ID must be exactly 9 digits.');
+        throw new Error('ID must be exactly 9 digits. (is: ' + id + ')');
     }
     const COUNTRY_CODE_CH = '76';
     const PARTICIPANT_CODE_BAG = '13376';

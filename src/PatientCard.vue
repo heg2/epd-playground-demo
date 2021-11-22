@@ -109,7 +109,7 @@ export default {
     display: grid;
     position: relative;
     top: -175px;
-    width: 220px;
+    width: 221px;
     left: 90px;
     margin-left: 0;
     margin-right: 0;

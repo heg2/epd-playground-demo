@@ -6,8 +6,8 @@
             Mit dem Patient Generator können Beispiel-Patient*innen erstellt werden. Dazu muss man sich im BFH-Netz befinden (oder per VPN eingewählt sein). Kudos an Robin Glauser für das Erstellen des Patient Generators.
         </p>
         <p v-if="patientGeneratorAvailable === false" class="patgen-not-available">
-            Der Patient Generator ist nicht erreichbar.<br />
-            Um neue Beispiel-Patient*innen erstellen zu können, musst du dich im Netz der BFH befinden (vor Ort oder per VPN).<br>
+            <b>Der Patient Generator ist nicht erreichbar.</b><br />
+            Um mit dem Patient Generator neue Beispiel-Patient*innen erstellen zu können, musst du dich im Netz der BFH befinden (vor Ort oder per VPN).<br>
             Ohne Patient Generator hast du die Möglichkeit, unten über eine EPR-SPID einen vorhandenen Datensatz zu laden.
         </p>
         <patient-card v-if="patient.name" :patient="patient" :onRefresh="() => this.refreshPatient()" />
@@ -32,7 +32,7 @@
                 <p>
                     <small>Dies kann die ID eines neu angelegten Patienten sein, oder eine der folgenden:
                         <span v-for="id in knownIds" @click="() => this.localId=id.local">{{id.local}}, </span>
-                         ...
+                        ...
                     </small>
                 </p>
 
@@ -61,15 +61,24 @@
                 <p>
                     In Demo noch nicht implementiert.
                 </p>
-                <!--a @click="uploadDocument">upload a document</a>
-                <input type="file" ref="documentInput" /-->
+
+                <input type="file" ref="documentInput" />
+                <button @click="uploadDocument">ausführen</button>
             </li>
             <li>
                 <h3>Dokumente suchen</h3>
                 <p>
-                    In Demo noch nicht implementiert.
+                    Lädt eine Liste der Dokumente, die für eine Person mit gegebener EPR-SPID im EPD Playground vorhanden sind.
                 </p>
-                <!--a @click="searchDocuments">search documents</a-->
+                <p>
+                    <small>Beispiele für EPR-SPID:
+                        <span v-for="id in knownIds" @click="() => this.eprSpid=id.spid">{{id.spid}}, </span>
+                        ...
+                    </small>
+                </p>
+                <label for="spid-input2">EPR-SPID:</label>
+                <input type="text" v-model="eprSpid" id="spid-input2"/>
+                <button @click="searchDocumentsByeprSpid(this.eprSpid)">ausführen</button>
             </li>
         </ul>
         <p>Tipp: Aktiviere die Browser-Konsole für mehr Informationen.<br />(auf Mac: [alt] [cmd] [I], auf Windows: [Ctrl] [Shift] [I])</p>
@@ -77,24 +86,27 @@
 
 
     <!--p id="display" v-if="display!= ''">
-        {{ display }}<br /><br />
-        See browser console for details.
-    </p-->
+    {{ display }}<br /><br />
+    See browser console for details.
+</p-->
 
 </template>
 
 <script>
+// node modules
+import { v4 as uuid } from 'uuid';
+
 // Vue Components
 import PatientCard from './PatientCard.vue';
 
 // global constants and helper functions
-import { getIdBySystemOID, convertToBase64, getExamplePatientFromPatientGenerator, checkAvailability,
+import { getIdBySystemOID, convertToBase64, getExamplePatientFromPatientGenerator, checkAvailability, generateEprSpid,
          EPR_SPID_OID, HOEHEWEG_OID, KNOWN_IDS } from './helpers.js';
 
 // JSON templates
 import createPatientMessage from '../static/createMessageTemplate.json';
 import organizationHoeheweg from '../static/organizationHoeheweg.json';
-import createDocumentBundle from '../static/createDocumentBundle.json';
+import createDocumentBundle from '../static/createDocumentTemplate.json';
 
 export default {
     name: 'app',
@@ -206,11 +218,201 @@ export default {
             const inputFile = this.$refs.documentInput.files[0];
             convertToBase64(inputFile)
             .then(base64 => {
-                createDocumentBundle.entry[0].resource = {
+
+                this.patient.id = 'pat1';
+                const fileResourceUrl = 'urn:uuid:' + uuid();
+                const submissionSetUrl = 'urn:uuid:' + uuid();
+                const documentReferenceUrl = 'urn:uuid:' + uuid();
+                const OID_URN = 'urn:oid:1.1.1.99.1'
+
+                const fileResource = {
                     "resourceType": "Binary",
                     "contentType": inputFile.type,
                     "data": base64
+                };
+
+                const submissionSetResource = {
+                    "resourceType": "List",
+                    id: submissionSetUrl,
+                    "meta": {
+                        "profile": [
+                            "http://profiles.ihe.net/ITI/MHD/StructureDefinition/IHE.MHD.Comprehensive.SubmissionSet"
+                        ]
+                    },
+                    "extension": [
+                        {
+                            "url": "http://profiles.ihe.net/ITI/MHD/StructureDefinition/ihe-designationType",
+                            "valueCodeableConcept": {
+                                "coding": [
+                                    {
+                                        "system": "http://snomed.info/sct",
+                                        "code": "71388002",
+                                        "display": "Procedure (procedure)"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "url": "http://profiles.ihe.net/ITI/MHD/StructureDefinition/ihe-sourceId",
+                            "valueIdentifier": {
+                                "value": "urn:oid:1.3.6.1.4.1.12559.11.13.2.5" // OID der publizierenden Organisation, unklar was das für eine OID ist
+                            }
+                        }
+                    ],
+                    "identifier": [
+                        {
+                            "use": "official",
+                            "system": "urn:ietf:rfc:3986",
+                            "value": submissionSetUrl
+                        }
+                    ],
+                    "status": "current",
+                    "mode": "working",
+                    "title": "EPD Playground Testdokument (" + new Date().toLocaleDateString() + ")",
+                    "code": {
+                        "coding": [
+                            {
+                                "system": "http://profiles.ihe.net/ITI/MHD/CodeSystem/MHDlistTypes",
+                                "code": "submissionset",
+                                "display": "Submission Set"
+                            }
+                        ]
+                    },
+                    "subject": {
+                        "reference": 'https://test.ahdis.ch/mag-bfh/fhir/Patient/' + OID_URN + '-' + getIdBySystemOID(OID_URN, this.patient)
+                    },
+                    "entry": [
+                      {
+                        "item": {
+                          "reference": documentReferenceUrl
+                        }
+                      }
+                  ],
+                    "date": new Date().toISOString().substring(0,10) // ISO-String mit Zeit wird vom Mobile Access Gateway z.Z. (2021-11-22) nicht korrekt unterstützt
                 }
+
+                console.log(JSON.stringify(this.patient))
+                const documentReferenceResource = {
+                    resourceType: "DocumentReference",
+                    contained: [
+                        JSON.parse(JSON.stringify(this.patient)) // sonst ist es aus einem seltsamen grund null
+                    ],
+                    masterIdentifier: {
+                        value: 'urn:oid:2.16.756.5.30.1.178.1.1.1.' + Math.floor(Math.random() * 1000000000) // Klinik Höheweg plus random Knoten
+                    },
+                    identifier: [
+                        {
+                            use: "official",
+                            system: "urn:ietf:rfc:3986",
+                            value: documentReferenceUrl
+                        }
+                    ],
+                    status: "current",
+                    type: {
+                        coding: [
+                            {
+                                system: "http://snomed.info/sct",
+                                code: "721912009",
+                                display: "Medication summary document (record artifact)"
+                            }
+                        ]
+                    },
+                    category: [
+                        {
+                            coding: [
+                                {
+                                    system: "http://snomed.info/sct",
+                                    code: "422735006",
+                                    display: "Summary clinical document (record artifact)"
+                                }
+                            ]
+                        }
+                    ],
+                    "subject": {
+                        reference: 'https://test.ahdis.ch/mag-bfh/fhir/Patient/' + OID_URN + '-' + getIdBySystemOID(OID_URN, this.patient)
+                    },
+                    source: "urn:oid:1.3.6.1.4.1.12559.11.13.2.5", // OID der publizierenden Organisation, unklar was das für eine OID ist
+                    date: new Date().toISOString().substring(0,10), // ISO-String mit Zeit wird vom Mobile Access Gateway z.Z. (2021-11-22) nicht korrekt unterstützt
+                    description: "EPD Playground Testdokument (" + new Date().toLocaleDateString() + ")",
+                    securityLabel: [
+                        {
+                            coding: [
+                                {
+                                    system: "http://snomed.info/sct",
+                                    code: "17621005",
+                                    display: "Normal (qualifier value)"
+                                }
+                            ]
+                        }
+                    ],
+                    content: [
+                        {
+                            attachment: {
+                                contentType: inputFile.type,
+                                language: "de-CH",
+                                url: fileResourceUrl//,
+                                //size: inputFile.size
+                            },
+                            format: {
+                                system: "urn:oid:1.3.6.1.4.1.19376.1.2.3",
+                                code: "urn:ihe:pharm:pml:2013",
+                                display: "Community Medication List"
+                            }
+                        }
+                    ],
+                    context: {
+                        facilityType: {
+                            coding: [
+                                {
+                                    system: "http://snomed.info/sct",
+                                    code: "264358009",
+                                    display: "General practice premises (environment)"
+                                }
+                            ]
+                        },
+                        practiceSetting: {
+                            coding: [
+                                {
+                                    system: "http://snomed.info/sct",
+                                    code: "394802001",
+                                    display: "General medicine (qualifier value)"
+                                }
+                            ]
+                        },
+                        sourcePatientInfo: {
+                            reference: '#' + this.patient.id
+                        }
+                    }
+                };
+
+
+                createDocumentBundle.entry = [
+                    {
+                        fullUrl: fileResourceUrl,
+                        resource: fileResource,
+                        request: {
+                            method: 'POST',
+                            url: fileResourceUrl
+                        }
+                    },
+                    {
+                        fullUrl: submissionSetUrl,
+                        resource: submissionSetResource,
+                        request: {
+                            method: 'POST',
+                            url: submissionSetUrl
+                        }
+                    },
+                    {
+                        fullUrl: documentReferenceUrl,
+                        resource: documentReferenceResource,
+                        request: {
+                            method: 'POST',
+                            url: documentReferenceUrl
+                        }
+                    }
+                ]
+                console.log(createDocumentBundle)
                 this.$fhir.create(createDocumentBundle)
                 .then((res) => {
                     this.display = 'See console.';
@@ -259,7 +461,7 @@ export default {
                     {
                         system: EPR_SPID_OID,
                         // generate a  EPR-SPID from the time string, for demo purposes
-                        value: '7613376153' + timeString.substring(3,11)
+                        value: generateEprSpid(timeString.substring(3,12))
                     }
                 ];
                 this.patient = patientResource;

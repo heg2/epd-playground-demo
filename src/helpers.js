@@ -41,9 +41,15 @@ export function convertToBase64(file) {
         if (file) {
             // FileReader function for read the file.
             const fileReader = new FileReader();
-            var base64;
             // Onload of file read the file content
-            fileReader.onload = (e => resolve(e.target.result));
+            fileReader.onload = (e => {
+                const input = e.target.result;
+                if (input.indexOf(';base64,') > -1) {
+                    return resolve(input.split(';base64,')[1]);
+                } else {
+                    return resolve(btoa(e.target.result));
+                }
+            });
             // Convert data to base64
             fileReader.readAsDataURL(file);
         }

@@ -226,74 +226,73 @@ export default {
                 const OID_URN = 'urn:oid:1.1.1.99.1'
 
                 const fileResource = {
-                    "resourceType": "Binary",
-                    "contentType": inputFile.type,
-                    "data": base64
+                    resourceType: 'Binary',
+                    contentType: inputFile.type,
+                    data: base64
                 };
 
                 const submissionSetResource = {
-                    "resourceType": "List",
+                    resourceType: 'List',
                     id: submissionSetUrl,
-                    "meta": {
-                        "profile": [
-                            "http://profiles.ihe.net/ITI/MHD/StructureDefinition/IHE.MHD.Comprehensive.SubmissionSet"
+                    meta: {
+                        profile: [
+                            'http://profiles.ihe.net/ITI/MHD/StructureDefinition/IHE.MHD.Comprehensive.SubmissionSet'
                         ]
                     },
-                    "extension": [
+                    extension: [
                         {
-                            "url": "http://profiles.ihe.net/ITI/MHD/StructureDefinition/ihe-designationType",
-                            "valueCodeableConcept": {
-                                "coding": [
+                            url: 'http://profiles.ihe.net/ITI/MHD/StructureDefinition/ihe-designationType',
+                            valueCodeableConcept: {
+                                coding: [
                                     {
-                                        "system": "http://snomed.info/sct",
-                                        "code": "71388002",
-                                        "display": "Procedure (procedure)"
+                                        system: 'http://snomed.info/sct',
+                                        code: '71388002',
+                                        display: 'Procedure (procedure)'
                                     }
                                 ]
                             }
                         },
                         {
-                            "url": "http://profiles.ihe.net/ITI/MHD/StructureDefinition/ihe-sourceId",
-                            "valueIdentifier": {
-                                "value": "urn:oid:1.3.6.1.4.1.12559.11.13.2.5" // OID der publizierenden Organisation, unklar was das für eine OID ist
+                            url: 'http://profiles.ihe.net/ITI/MHD/StructureDefinition/ihe-sourceId',
+                            valueIdentifier: {
+                                value: 'urn:oid:1.3.6.1.4.1.12559.11.13.2.5' // OID der publizierenden Organisation, unklar was das für eine OID ist
                             }
                         }
                     ],
-                    "identifier": [
+                    identifier: [
                         {
-                            "use": "official",
-                            "system": "urn:ietf:rfc:3986",
-                            "value": submissionSetUrl
+                            use: 'official',
+                            system: 'urn:ietf:rfc:3986',
+                            value: submissionSetUrl
                         }
                     ],
-                    "status": "current",
-                    "mode": "working",
-                    "title": "EPD Playground Testdokument (" + new Date().toLocaleDateString() + ")",
-                    "code": {
-                        "coding": [
+                    status: 'current',
+                    mode: 'working',
+                    title: 'EPD Playground Testdokument (' + new Date().toLocaleDateString() + ')',
+                    code: {
+                        coding: [
                             {
-                                "system": "http://profiles.ihe.net/ITI/MHD/CodeSystem/MHDlistTypes",
-                                "code": "submissionset",
-                                "display": "Submission Set"
+                                system: 'http://profiles.ihe.net/ITI/MHD/CodeSystem/MHDlistTypes',
+                                code: 'submissionset',
+                                display: 'Submission Set'
                             }
                         ]
                     },
-                    "subject": {
-                        "reference": 'https://test.ahdis.ch/mag-bfh/fhir/Patient/' + OID_URN + '-' + getIdBySystemOID(OID_URN, this.patient)
+                    subject: {
+                        reference: 'https://test.ahdis.ch/mag-bfh/fhir/Patient/' + OID_URN + '-' + getIdBySystemOID(OID_URN, this.patient)
                     },
-                    "entry": [
+                    entry: [
                       {
-                        "item": {
-                          "reference": documentReferenceUrl
+                        item: {
+                          reference: documentReferenceUrl
                         }
                       }
                   ],
-                    "date": new Date().toISOString().substring(0,10) // ISO-String mit Zeit wird vom Mobile Access Gateway z.Z. (2021-11-22) nicht korrekt unterstützt
+                    date: new Date().toISOString().substring(0,10) // ISO-String mit Zeit wird vom Mobile Access Gateway z.Z. (2021-11-22) nicht korrekt unterstützt
                 }
 
-                console.log(JSON.stringify(this.patient))
                 const documentReferenceResource = {
-                    resourceType: "DocumentReference",
+                    resourceType: 'DocumentReference',
                     contained: [
                         JSON.parse(JSON.stringify(this.patient)) // sonst ist es aus einem seltsamen grund null
                     ],
@@ -302,18 +301,18 @@ export default {
                     },
                     identifier: [
                         {
-                            use: "official",
-                            system: "urn:ietf:rfc:3986",
+                            use: 'official',
+                            system: 'urn:ietf:rfc:3986',
                             value: documentReferenceUrl
                         }
                     ],
-                    status: "current",
+                    status: 'current',
                     type: {
                         coding: [
                             {
-                                system: "http://snomed.info/sct",
-                                code: "721912009",
-                                display: "Medication summary document (record artifact)"
+                                system: 'http://snomed.info/sct',
+                                code: '721912009',
+                                display: 'Medication summary document (record artifact)'
                             }
                         ]
                     },
@@ -321,26 +320,26 @@ export default {
                         {
                             coding: [
                                 {
-                                    system: "http://snomed.info/sct",
-                                    code: "422735006",
-                                    display: "Summary clinical document (record artifact)"
+                                    system: 'http://snomed.info/sct',
+                                    code: '422735006',
+                                    display: 'Summary clinical document (record artifact)'
                                 }
                             ]
                         }
                     ],
-                    "subject": {
+                    subject: {
                         reference: 'https://test.ahdis.ch/mag-bfh/fhir/Patient/' + OID_URN + '-' + getIdBySystemOID(OID_URN, this.patient)
                     },
-                    source: "urn:oid:1.3.6.1.4.1.12559.11.13.2.5", // OID der publizierenden Organisation, unklar was das für eine OID ist
+                    source: 'urn:oid:1.3.6.1.4.1.12559.11.13.2.5', // OID der publizierenden Organisation, unklar was das für eine OID ist
                     date: new Date().toISOString().substring(0,10), // ISO-String mit Zeit wird vom Mobile Access Gateway z.Z. (2021-11-22) nicht korrekt unterstützt
-                    description: "EPD Playground Testdokument (" + new Date().toLocaleDateString() + ")",
+                    description: 'EPD Playground Testdokument (' + new Date().toLocaleDateString() + ')',
                     securityLabel: [
                         {
                             coding: [
                                 {
-                                    system: "http://snomed.info/sct",
-                                    code: "17621005",
-                                    display: "Normal (qualifier value)"
+                                    system: 'http://snomed.info/sct',
+                                    code: '17621005',
+                                    display: 'Normal (qualifier value)'
                                 }
                             ]
                         }
@@ -349,14 +348,13 @@ export default {
                         {
                             attachment: {
                                 contentType: inputFile.type,
-                                language: "de-CH",
-                                url: fileResourceUrl//,
-                                //size: inputFile.size
+                                language: 'de-CH',
+                                url: fileResourceUrl
                             },
                             format: {
-                                system: "urn:oid:1.3.6.1.4.1.19376.1.2.3",
-                                code: "urn:ihe:pharm:pml:2013",
-                                display: "Community Medication List"
+                                system: 'urn:oid:1.3.6.1.4.1.19376.1.2.3',
+                                code: 'urn:ihe:pharm:pml:2013',
+                                display: 'Community Medication List'
                             }
                         }
                     ],
@@ -364,18 +362,18 @@ export default {
                         facilityType: {
                             coding: [
                                 {
-                                    system: "http://snomed.info/sct",
-                                    code: "264358009",
-                                    display: "General practice premises (environment)"
+                                    system: 'http://snomed.info/sct',
+                                    code: '264358009',
+                                    display: 'General practice premises (environment)'
                                 }
                             ]
                         },
                         practiceSetting: {
                             coding: [
                                 {
-                                    system: "http://snomed.info/sct",
-                                    code: "394802001",
-                                    display: "General medicine (qualifier value)"
+                                    system: 'http://snomed.info/sct',
+                                    code: '394802001',
+                                    display: 'General medicine (qualifier value)'
                                 }
                             ]
                         },

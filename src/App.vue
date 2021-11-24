@@ -5,13 +5,17 @@
         <p v-if="patientGeneratorAvailable !== false">
             Mit dem Patient Generator können Beispiel-Patient*innen erstellt werden. Dazu muss man sich im BFH-Netz befinden (oder per VPN eingewählt sein). Kudos an Robin Glauser für das Erstellen des Patient Generators.
         </p>
+
         <p v-if="patientGeneratorAvailable === false" class="patgen-not-available">
             <b>Der Patient Generator ist nicht erreichbar.</b><br />
             Um mit dem Patient Generator neue Beispiel-Patient*innen erstellen zu können, musst du dich im Netz der BFH befinden (vor Ort oder per VPN).<br>
-            Ohne Patient Generator hast du die Möglichkeit, unten über eine EPR-SPID einen vorhandenen Datensatz zu laden.
+            Ohne Patient Generator hast du unten die Möglichkeit, unten über eine EPR-SPID einen vorhandenen Datensatz zu laden.
         </p>
         <patient-card v-if="patient.name" :patient="patient" :onRefresh="() => this.refreshPatient()" />
 
+        <p v-if="patientGeneratorAvailable !== false">
+            Im Gegensatz zum echten EPD vergibt der EPD Playground keine EPR-SPID, wenn ein*e neue*r Patient*in hinzugefügt wird. <br /> Deshalb geneneriert dieses Tool eine zufällige EPR-SPID, wenn du mit dem Patient Generator ein*e neue*n Patient*in erstellst. Diese generierte EPR-SPID wird dann mit auf den EPD Playground geschrieben.
+        </p>
 
         <h2>Folgende Aktionen sind verfügbar: </h2>
         <ul>
@@ -19,7 +23,7 @@
                 <h3>Beispielpatient*in schreiben</h3>
                 <p>
                     Schreibt die oben aufgeführten Patientendaten auf den EPD Playground. <br />
-                    Merke dir die IDs, damit du den Patient später wieder laden kannst.
+                    Merke dir die IDs, damit du den Patient später wieder laden kannst!
                 </p>
                 <button @click="createPatient" :disabled="!patientIsNew">ausführen</button>
                 <span v-if="!patientIsNew" class="isnotnew-tip">Diese*r Patient*in ist bereits auf dem EPD Playground gespeichert.</span>
@@ -56,7 +60,7 @@
                 <input type="text" v-model="eprSpid" id="spid-input"/>
                 <button @click="loadPatientBySPID(eprSpid)">ausführen</button>
             </li>
-            <li>
+            <!--li>
                 <h3>Dokument hochladen</h3>
                 <p>
                     In Demo noch nicht implementiert.
@@ -79,7 +83,7 @@
                 <label for="spid-input2">EPR-SPID:</label>
                 <input type="text" v-model="eprSpid" id="spid-input2"/>
                 <button @click="searchDocumentsByeprSpid(this.eprSpid)">ausführen</button>
-            </li>
+            </li-->
         </ul>
         <p>Tipp: Aktiviere die Browser-Konsole für mehr Informationen.<br />(auf Mac: [alt] [cmd] [I], auf Windows: [Ctrl] [Shift] [I])</p>
     </div>
@@ -120,6 +124,7 @@ export default {
             localId: 'PAT.7056.0189',
             patientIsNew: false,
             eprSpid: '',
+            mpiId: '',
             patientGeneratorAvailable: undefined,
             documents: undefined,
             knownIds: KNOWN_IDS

@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "publishdemo": "vue-tsc --noEmit && vite build && git add dist -f && git commit -m \"test\" && git subtree push --prefix dist origin demo"
   },
   "dependencies": {
     "@i4mi/js-on-fhir": "^0.2.1",

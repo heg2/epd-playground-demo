@@ -15,6 +15,21 @@ export const KNOWN_IDS = [
     }
 ];
 
+const SAMPLE_GIVEN = ['Sandra', 'Robert', 'Ueli', 'Marie', 'Kurt', 'Heidi', 'Jean', 'Bernadette'];
+const SAMPLE_FAMILY = ['Müller', 'Meier', 'Fischer', 'Ritter', 'Dupont', 'Leclerc'];
+
+function getRandomGiven() {
+  return SAMPLE_GIVEN[Math.floor(Math.random() * SAMPLE_GIVEN.length)];
+}
+
+function getRandomFamily() {
+  return SAMPLE_FAMILY[Math.floor(Math.random() * SAMPLE_FAMILY.length)];
+}
+
+function getRandomBirthDate() {
+  return '19' + Math.ceil(Math.random() * 99).toString() + '-0' + Math.ceil(Math.random() * 9).toString() + '-' + (Math.floor(Math.random() * 17) + 10).toString();
+}
+
 /*
 * Get a patients ID for a given system, defined by the systems OID.
 * @param system     - the OID of the system you want to get the ID from
@@ -66,20 +81,37 @@ export function convertToBase64(file) {
 * @returns           - a Promise that resolves to a Patient resource.
 */
 export function getExamplePatientFromPatientGenerator() {
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.withCredentials = true;
+  const patId = Math.floor(Math.random() * 10).toString() + Date.now().toString().substring(4,12);
 
-        xhr.addEventListener("readystatechange", function() {
-            if (this.readyState === 4) {
-                resolve(JSON.parse(this.response));
-            }
-        })
-
-        xhr.open("GET", "http://patient-generator.i4mi.bfh.ch/patient/get");
-        xhr.setRequestHeader("Accept", "application/json");
-        xhr.send();
-    });
+  return Promise.resolve ({
+    resourceType: 'Patient',
+    id: 'demo-pat',
+    identifier: [
+      // {
+      //   system: 'urn:oid:1.1.1.99.1', // MPI-ID
+      //   value: '78e97f12-7739-4e93-93be-4aff4f0ac10d'
+      // },
+      {
+        system: 'urn:oid:2.16.756.5.30.1.127.3.10.3', // EPR-SPID
+        value: generateEprSpid(patId)
+      },
+      {
+        system: 'urn:oid:2.16.756.5.30.1.178.1.1', // Klinik Höheweg ID
+        value: 'PAT-' + patId
+      }
+    ],
+    active: true,
+    name: [
+      {
+        family: getRandomFamily(),
+        given: [
+          getRandomGiven()
+        ]
+      }
+    ],
+    gender: 'unknown',
+    birthDate: getRandomBirthDate()
+  });
 }
 
 /*

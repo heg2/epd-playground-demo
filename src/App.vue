@@ -60,7 +60,7 @@
                 <input type="text" v-model="eprSpid" id="spid-input"/>
                 <button @click="loadPatientBySPID(eprSpid)">ausführen</button>
             </li>
-            <!--li>
+            <li>
                 <h3>Dokument hochladen</h3>
                 <p>
                     In Demo noch nicht implementiert.
@@ -83,7 +83,7 @@
                 <label for="spid-input2">EPR-SPID:</label>
                 <input type="text" v-model="eprSpid" id="spid-input2"/>
                 <button @click="searchDocumentsByeprSpid(this.eprSpid)">ausführen</button>
-            </li-->
+            </li>
         </ul>
         <p>Tipp: Aktiviere die Browser-Konsole für mehr Informationen.<br />(auf Mac: [alt] [cmd] [I], auf Windows: [Ctrl] [Shift] [I])</p>
     </div>
@@ -96,7 +96,7 @@
 
 </template>
 
-<script>
+<script lang="ts">
 // node modules
 import { v4 as uuid } from 'uuid';
 
@@ -157,10 +157,11 @@ export default {
 
             // link  the Patient resource in the Message Header (which must be
             // always the first entry of the Message Bundle)
-            createPatientMessage.entry[0].focus = [ { reference: 'Patient/' + this.patient.id } ];
+            createPatientMessage.entry[0].resource.focus = [ { reference: 'Patient/' + this.patient.id } ];
 
             // now, we are ready to go and can send the Bundle to the Mobile Access Gateway
             console.log(createPatientMessage)
+
             this.$fhir.performOperation('process-message', createPatientMessage)
             .then(result => {
                 console.log('Create Patient server response:',result);
@@ -173,6 +174,7 @@ export default {
                 this.display = 'Oops. Something went wrong.';
                 console.log(err);
             });
+            
         },
 
         searchSpid(id) {
